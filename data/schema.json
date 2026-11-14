@@ -1,0 +1,59 @@
+{
+  "routes": {
+    "key": "id",
+    "columns": {
+      "id": "text",
+      "species": "text",
+      "grade": "text",
+      "region": "text",
+      "wholesale_market": "text",
+      "retail_market": "text",
+      "unit_kg": "number"
+    },
+    "description": "同品规的批零匹配线路；市场代号仅为本地代号，单位重量是每报价单位的公斤数。",
+    "references": {}
+  },
+  "quotes": {
+    "key": "id",
+    "columns": {
+      "id": "text",
+      "route_id": "text",
+      "day": "date",
+      "side": "text",
+      "price": "money",
+      "quote_kind": "text",
+      "available_at": "time"
+    },
+    "description": "报价不保证成交；price 按线路报价单位计价。缺行是未观测，挂牌与询价不可不加区分混合。",
+    "references": {
+      "route_id": "routes.id"
+    }
+  },
+  "trades": {
+    "key": "id",
+    "columns": {
+      "id": "text",
+      "route_id": "text",
+      "day": "date",
+      "side": "text",
+      "quantity_kg": "number",
+      "unit_price_kg": "money",
+      "cancelled": "bool"
+    },
+    "description": "成交单独以公斤计价，取消记录不产生真实成交；与报价没有逐笔一一关系。",
+    "references": {
+      "route_id": "routes.id"
+    }
+  },
+  "calendar": {
+    "key": "id",
+    "columns": {
+      "id": "date",
+      "weekday": "int",
+      "holiday": "bool",
+      "season": "text"
+    },
+    "description": "日期历表；季节是运营标记，不是已估计出的结构断点。",
+    "references": {}
+  }
+}

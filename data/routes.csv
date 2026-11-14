@@ -1,0 +1,7 @@
+id,species,grade,region,wholesale_market,retail_market,unit_kg
+R0,带鱼,中规格,片区0,W0,S0,1
+R1,对虾,中规格,片区1,W1,S1,0.5
+R2,梭子蟹,中规格,片区0,W0,S2,1
+R3,带鱼,中规格,片区1,W1,S3,0.5
+R4,对虾,中规格,片区0,W0,S4,1
+R5,梭子蟹,中规格,片区1,W1,S5,0.5
