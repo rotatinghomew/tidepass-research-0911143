@@ -6,12 +6,55 @@ from .cases import CaseStore
 from .catalog import Catalog
 from .domain import overview
 from .profile import numeric_profiles
+from .transmission.analysis import run_analysis
+from .transmission.series import (
+    build_series,
+    known_dimensions,
+    select_routes,
+    series_overview,
+    trade_evidence,
+)
 
 
 class Application:
     def __init__(self, data, state):
         self.catalog = Catalog(data)
         self.cases = CaseStore(state)
+
+    def _transmission_series(self, query):
+        def single(name, default=None):
+            return query[name][0] if name in query else default
+
+        def plural(name):
+            return query[name] if name in query else None
+
+        route_ids = plural("route_id")
+        routes = select_routes(
+            self.catalog, species=single("species"), grade=single("grade"),
+            region=single("region"), route_ids=route_ids)
+        quote_kind = single("quote_kind", "挂牌")
+        match = single("match", "same_day")
+        try:
+            window = int(single("window", "2"))
+        except ValueError as error:
+            raise ValueError("窗口半径需为整数") from error
+        if not 1 <= window <= 7:
+            raise ValueError("窗口匹配半径需在一至七天之间")
+        if quote_kind not in ("挂牌", "询价", "any"):
+            raise ValueError("报价类型需为挂牌、询价或 any")
+        if match not in ("same_day", "window", "trade_day"):
+            raise ValueError("未知匹配方式：" + match)
+        output = []
+        for route in routes:
+            series = build_series(self.catalog, route, quote_kind=quote_kind,
+                                  match=match, window=window)
+            entry = series_overview(self.catalog, series)
+            if single("evidence") == "1":
+                entry["trade_evidence"] = trade_evidence(self.catalog, route, series["paired_days"])
+            output.append(entry)
+        return {"source_fingerprint": self.catalog.fingerprint,
+                "quote_kind": quote_kind, "match": match, "window": window,
+                "series": output}
 
     def dispatch(self, method, target, body=None):
         parsed = urlsplit(target)
@@ -34,6 +77,16 @@ class Application:
                 return 200, {"source_fingerprint": self.catalog.fingerprint, "view": overview(self.catalog)}
             if method == "GET" and path == "/profiles":
                 return 200, {"source_fingerprint": self.catalog.fingerprint, "profiles": numeric_profiles(self.catalog)}
+            if method == "GET" and path == "/transmission/dimensions":
+                return 200, {"source_fingerprint": self.catalog.fingerprint,
+                             "dimensions": known_dimensions(self.catalog)}
+            if method == "GET" and path == "/transmission/series":
+                return 200, self._transmission_series(query)
+            if method == "POST" and path == "/transmission/analyze":
+                if not isinstance(body, dict):
+                    raise ValueError("请求内容应为对象")
+                result = run_analysis(self.catalog, body)
+                return 200, result
             if method == "GET" and path == "/cases":
                 return 200, {"cases": self.cases.list()}
             if method == "GET" and path.startswith("/cases/"):

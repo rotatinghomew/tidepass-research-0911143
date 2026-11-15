@@ -121,6 +121,57 @@ class ServiceTests(unittest.TestCase):
             urlopen(request, timeout=3)
         self.assertEqual(error.exception.code, 400)
 
+    def test_transmission_dimensions_endpoint(self):
+        status, result = self.application.dispatch("GET", "/transmission/dimensions")
+        self.assertEqual(status, 200)
+        self.assertEqual(result["source_fingerprint"], self.application.catalog.fingerprint)
+        self.assertIn("带鱼", result["dimensions"]["species"])
+
+    def test_transmission_series_endpoint_and_validation(self):
+        status, result = self.application.dispatch(
+            "GET", "/transmission/series?route_id=R0&match=window&window=2&evidence=1")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(result["series"]), 1)
+        self.assertTrue(result["series"][0]["trade_evidence"])
+        self.assertEqual(self.application.dispatch(
+            "GET", "/transmission/series?match=unknown")[0], 400)
+        self.assertEqual(self.application.dispatch(
+            "GET", "/transmission/series?window=9")[0], 400)
+        self.assertEqual(self.application.dispatch(
+            "GET", "/transmission/series?route_id=NOPE")[0], 400)
+
+    def test_transmission_analyze_endpoint(self):
+        payload = {"route_ids": ["R0"], "max_lag": 2, "bootstrap_replications": 40,
+                   "models": ["controlled"], "windows": ["full"]}
+        status, result = self.application.dispatch("POST", "/transmission/analyze", payload)
+        self.assertEqual(status, 200)
+        self.assertEqual(result["routes_analyzed"], 1)
+        self.assertTrue(result["interpretation"])
+        model = result["results"][0]["windows"][0]["models"][0]
+        self.assertEqual(model["model"], "controlled")
+        self.assertTrue(model["cumulative"])
+        self.assertEqual(self.application.dispatch(
+            "POST", "/transmission/analyze", {"max_lag": 99})[0], 400)
+        self.assertEqual(self.application.dispatch(
+            "POST", "/transmission/analyze", {"species": "不存在"})[0], 400)
+        self.assertEqual(self.application.dispatch(
+            "POST", "/transmission/analyze", ["not", "object"])[0], 400)
+
+    def test_transmission_analyze_over_http(self):
+        server = make_server(self.application, port=0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        payload = json.dumps({"route_ids": ["R0"], "max_lag": 1,
+                              "bootstrap_replications": 40}).encode()
+        request = Request(f"http://127.0.0.1:{server.server_port}/transmission/analyze",
+                          data=payload, headers={"Content-Type": "application/json"})
+        with urlopen(request, timeout=10) as response:
+            self.assertEqual(response.status, 200)
+            result = json.load(response)
+        self.assertEqual(result["routes_analyzed"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

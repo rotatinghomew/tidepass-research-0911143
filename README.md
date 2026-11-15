@@ -4,7 +4,7 @@
 
 ## 目录
 
-`tidepass/catalog.py` 解析并校验资料，`domain.py` 提供当前经营视图，`profile.py` 提供探索性数值摘要，`cases.py` 保存含资料副本的研究备注，`service.py` 处理 HTTP。`data/` 是可重复使用的虚构经营资料，`tests/` 检查当前接口和领域口径，`smoke.py` 发起真实本地 HTTP 请求后退出。
+`tidepass/catalog.py` 解析并校验资料，`domain.py` 提供当前经营视图，`profile.py` 提供探索性数值摘要，`cases.py` 保存含资料副本的研究备注，`transmission/` 构建可比批零序列并估计分布滞后、非对称冲击、长期关系检验与换季稳定性，`service.py` 处理 HTTP。`data/` 是可重复使用的虚构经营资料，`tests/` 检查当前接口和领域口径，`smoke.py` 发起真实本地 HTTP 请求后退出。传导分析的口径与边界见 `docs/domain.md`，接口参数见 `docs/api.md`。
 
 ## 本机运行
 
